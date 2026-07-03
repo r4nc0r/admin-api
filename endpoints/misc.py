@@ -131,3 +131,24 @@ def validateFormat():
     if "email" in request.args:
         result["email"] = chkEmail(request.args["email"])
     return jsonify(result)
+
+
+@API.route(api.BaseRoute+"/disabledPluginsOfUser", methods=["GET"])
+@secure(requireAuth=False, requireDB=133)
+def getDisabledPluginsOfUser():
+    if "username" not in request.args:
+        return jsonify(message="Missing required parameter 'username'"), 400
+    username = request.args["username"]
+    if "@" not in username:
+        return jsonify(message="Invalid username"), 400
+    from orm.domains import Domains
+    domain = Domains.query.filter(Domains.domainname == username.split("@")[1]).first()
+    if domain is None:
+        return jsonify(message="Domain not found"), 404
+    
+    from orm.domains import DisabledPlugins
+    disabledPlugins = DisabledPlugins.query.filter(DisabledPlugins.domainID == domain.ID)\
+                        .with_entities(DisabledPlugins.plugin).all()
+    disabledPlugins = [p[0] for p in disabledPlugins]
+
+    return jsonify({ "data": disabledPlugins })

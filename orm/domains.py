@@ -413,6 +413,15 @@ class Domains(DataModel, DB.Base, NotifyTable):
         with Service("systemd", errors=Service.SUPPRESS_ALL) as sysd:
             sysd.reloadService("gromox-delivery.service", "gromox-delivery-queue.service",
                                "gromox-http.service")
+            
+
+class DisabledPlugins(DataModel, DB.Base):
+    __tablename__ = "disabled_plugins"
+
+    domainID = Column("domain_id", INTEGER(10, unsigned=True), ForeignKey(Domains.ID, ondelete="cascade"), nullable=False, primary_key=True)
+    plugin = Column("plugin", VARCHAR(128), nullable=False, primary_key=True)
+
+    _dictmapping_ = ((Id("domainID", flags="init"), Text("plugin", flags="init")),)
 
 
 from .users import Users

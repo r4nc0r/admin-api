@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: grommunio Admin API
   description: grommunio administration REST API
-  version: 1.20.0
+  version: 1.21.0
 servers:
   - url: '/api/v1'
     description: Default deployment path
@@ -2126,6 +2126,113 @@ paths:
             application/json:
               schema:
                 type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/DatabaseError'
+
+  /domains/{domainID}/disabledPlugins:
+    get:
+      summary: Get list of disabled plugins of domain
+      operationId: getDisabledPlugins
+      tags:
+        - Misc
+      security:
+        - JWTCookie: []
+      parameters:
+        - $ref: '#/components/parameters/domainID'
+        - name: username
+          in: query
+          description: Full email of user
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of disabled plugins returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/DatabaseError'
+    put:
+      summary: Update list of disabled plugins of domain
+      operationId: setDisabledPlugins
+      tags:
+        - Misc
+      security:
+        - JWTCookie: []
+      parameters:
+        - $ref: '#/components/parameters/domainID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        '200':
+          description: Plugins updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/DatabaseError'
+      
+  /disabledPluginsOfUser:
+    get:
+      summary: Get list of disabled plugins of user
+      operationId: disabledPluginsOfUser
+      tags:
+        - Misc
+      security:
+        - JWTCookie: []
+      parameters:
+        - name: username
+          in: query
+          description: Full email of user
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of disabled plugins returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: string
         '400':
           $ref: '#/components/responses/InvalidRequest'
         '404':

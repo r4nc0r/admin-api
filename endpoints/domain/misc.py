@@ -13,6 +13,7 @@ from tools.dnsHealth import fullDNSCheck, generateDkimKeys
 
 from flask import request, jsonify
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 
 @API.route(api.BaseRoute+"/domains", methods=["GET"])
@@ -57,3 +58,40 @@ def generateDomainDkimKeys(domainID):
     if error is not None:
         return jsonify(message=error), 500
     return jsonify(dnsCheck)
+
+
+@API.route(api.BaseRoute+"/domains/<int:domainID>/disabledPlugins", methods=["GET"])
+@secure(requireDB=133)
+def getDisabledPlugins(domainID):
+    from orm.domains import Domains
+    domain = Domains.query.filter(Domains.ID == domainID).first()
+    if domain is None:
+        return jsonify(message="Domain not found"), 404
+    checkPermissions(DomainAdminROPermission(domain.ID))
+    from orm.domains import DisabledPlugins
+    disabledPlugins = DisabledPlugins.query.filter(DisabledPlugins.domainID == domainID)\
+                        .with_entities(DisabledPlugins.plugin).all()
+    disabledPlugins = [p[0] for p in disabledPlugins]
+
+    return jsonify({ "data": disabledPlugins })
+
+
+@API.route(api.BaseRoute+"/domains/<int:domainID>/disabledPlugins", methods=["PUT"])
+@secure(requireDB=133)
+def setDisabledPlugins(domainID):
+    from orm.domains import Domains, DisabledPlugins
+    domain = Domains.query.filter(Domains.ID == domainID).first()
+    if domain is None:
+        return jsonify(message="Domain not found"), 404
+    checkPermissions(DomainAdminPermission(domainID))
+    DisabledPlugins.query.filter(DisabledPlugins.domainID == domainID).delete()
+    plugins = request.get_json(silent=True)
+
+    try:
+        from orm.misc import DB
+        DB.session.add_all([DisabledPlugins(props={"domainID": domainID, "plugin": plugin}) for plugin in plugins if plugin])
+        DB.session.commit()
+    except IntegrityError as err:
+        return jsonify(message="List of plugins violate database constraints "+err.orig.args[1]), 400
+
+    return jsonify(message="Success")
