@@ -649,8 +649,13 @@ class Users(DataModel, DB.Base, NotifyTable):
         domains = getattr(self, "orgDomains", None) or\
                   [d._domainname for d in Domains.query.with_entities(Domains._domainname).filter(Domains.orgID == self.orgID)]
         domains = [domain.lower() for domain in domains]
-        if not value.aliasname.lower().split('@')[1] in domains:
-            raise ValueError(f"Cannot use alias from foreign domain: {value.aliasname.lower()}")
+        alias = value.aliasname.lower()
+        if not alias.split("@")[1] in domains:
+            raise ValueError(f"Cannot use alias from foreign domain: {alias}")
+
+        if Users.query.filter(func.lower(Users.username) == alias).first() is not None:
+            raise ValueError("'{}' already exists as a user".format(alias))
+
         return value
 
     @validates("_syncPolicy")
@@ -917,6 +922,11 @@ class Aliases(DataModel, DB.Base, NotifyTable):
 
     _dictmapping_ = ((Text("aliasname", flags="init"),),
                      (Text("mainname", flags="init"),))
+
+
+    def __str__(self):
+        return "{} -> {}".format(self.mainname, self.aliasname)
+
 
     def __init__(self, aliasname, main, *args, **kwargs):
         if main.ID == 0:
