@@ -378,7 +378,7 @@ def userQuery(domainID=None):
         sprop, sorder = s.split(",", 1) if "," in s else (s, "asc")
         if hasattr(PropTags, sprop.upper()):
             up = aliased(UserProperties)
-            query = query.join(up, (up.userID == Users.ID) & (up.tag == getattr(PropTags, sprop.upper())))\
+            query = query.outerjoin(up, (up.userID == Users.ID) & (up.tag == getattr(PropTags, sprop.upper())))\
                          .order_by(up._propvalstr.desc() if sorder == "desc" else up._propvalstr.asc())
 
     if "match" in request.args:
