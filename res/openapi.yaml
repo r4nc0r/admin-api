@@ -2157,7 +2157,7 @@ paths:
           in: query
           schema:
             type: string
-            pattern: '^(ID|username|domainID|pop3_imap|smtp|changePassword|publicAddress|privChat|privVideo|privFiles|privArchive|privWeb|privEas|privDav)(,(a|de)sc)?$'
+            pattern: '^[a-zA-Z]+(,(a|de)sc)?$'
         - $ref: '#/components/parameters/filterID'
         - name: username
           description: Filter by username
