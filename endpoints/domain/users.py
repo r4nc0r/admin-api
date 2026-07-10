@@ -304,18 +304,21 @@ def getUserSyncData(domainID, userID):
     return jsonify(data=tuple(devices.values()))
 
 
-def getUsernamesFromFile(domainID, userID, name):
+def getUsernamesFromFile(domainID, userID, type):
     checkPermissions(DomainAdminROPermission(domainID))
     from orm.users import Users
-    user = Users.query.filter(Users.ID == userID, Users.domainID == domainID)\
-                      .with_entities(Users.username, Users.maildir).first()
+    user = Users.query.filter(Users.ID == userID, Users.domainID == domainID).first()
     if user is None:
         return jsonify(message="User not found"), 404
-    try:
-        with open(user.maildir+"/config/"+name+".txt", encoding="utf-8") as file:
-            content = [line.strip() for line in file if line.strip() != ""]
-    except (FileNotFoundError, PermissionError, TypeError):
-        content = []
+    if not user.maildir:
+        return jsonify(message="User has no store"), 400
+    content = []
+    with Service("exmdb") as exmdb:
+        client = exmdb.user(user)
+        if type == "delegates":
+            content = client.getDelegates()
+        elif type == "sendas":
+            content = client.getSendAs()
     return jsonify(data=content)
 
 
@@ -349,33 +352,27 @@ def sendAss(*args, **kwargs):
     return Response(choices(content, (10, 1)), headers={"Content-Type": "text/plain"})
 
 
-def writeUsernamesToFile(domainID, userID, name):
+def writeUsernamesToFile(domainID, userID, type):
     checkPermissions(DomainAdminPermission(domainID))
     data = request.get_json(silent=True)
     if not isinstance(data, list):
         return jsonify(message="Invalid or missing data"), 400
     for entry in data:
         if not formats.email.match(entry):
-            return jsonify(message="Invalid {} e-mail '{}'".format(name, entry))
+            return jsonify(message="Invalid {} e-mail '{}'".format(type, entry))
     from orm.users import Users
-    user = Users.query.filter(Users.ID == userID, Users.domainID == domainID)\
-                      .with_entities(Users.username, Users.maildir).first()
+    user = Users.query.filter(Users.ID == userID, Users.domainID == domainID).first()
     if user is None:
         return jsonify(message="User not found"), 404
-    try:
-        filename = user.maildir+"/config/"+name+".txt"
-        with open(filename, "w", encoding="utf-8") as file:
-            file.write("\n".join(data)+"\n")
-    except (FileNotFoundError, PermissionError) as err:
-        return jsonify(message="Failed to write {}: {}".format(name, " - ".join(str(arg) for arg in err.args))), 500
-    except TypeError:
-        return jsonify(message="User does not support "+name), 400
-    try:
-        setDirectoryOwner(filename, Config["options"].get("fileUid"), Config["options"].get("fileGid"))
-        setDirectoryPermission(filename, Config["options"].get("filePermissions"))
-    except Exception:
-        pass
-    return jsonify(message=name.capitalize()+" updated")
+    if not user.maildir:
+        return jsonify(message="User has no store"), 400
+    with Service("exmdb") as exmdb:
+        client = exmdb.user(user)
+        if type == "delegates":
+            client.setDelegates(data)
+        elif type == "sendas":
+            client.setSendAs(data)
+    return jsonify(message=type.capitalize()+" updated")
 
 
 @API.route(api.BaseRoute+"/domains/<int:domainID>/users/<int:userID>/delegates", methods=["PUT"])
