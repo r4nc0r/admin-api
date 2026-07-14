@@ -59,8 +59,8 @@ def searchLdap():
     with Service("ldap", orgID) as ldap:
         ldapusers = ldap.searchUsers(request.args.get("query"), domainnames, limit=limit or None,
                                      filterIncomplete=request.args.get("showAll") != "true")
-    return jsonify(data=[{"ID": ldap.escape_filter_chars(u.ID), "name": u.name, "email": u.email,
-                          "type": u.type, "error": u.error} for u in ldapusers if u.ID])
+    return jsonify(data=[{"ID": ldap.escape_filter_chars(u.ID), "name": u.name or "", "email": u.email or "",
+                          "type": u.type or "user", "error": u.error} for u in ldapusers if u.ID])
 
 
 def ldapDownsync(orgID=None, domainID=None):
