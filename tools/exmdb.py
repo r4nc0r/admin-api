@@ -27,6 +27,7 @@ class _FolderNode():
         from tools.rop import gcToValue
         self.ID = gcToValue(folder.folderId)
         self.parentID = gcToValue(folder.parentId)
+        self.container = folder.container
         self.name = folder.displayName
         self.subfolders = []
         if subfolders:
@@ -45,7 +46,7 @@ class _FolderNode():
         return hex(self.ID)
 
     def _toDict(self, recursive=True):
-        me = dict(ID=self.ID, parentID=self.parentID, name=self.name)
+        me = dict(ID=self.ID, parentID=self.parentID, container=self.container, name=self.name)
         if recursive:
             me["subfolders"] = [sf._toDict(True) for sf in self.subfolders]
         return me
