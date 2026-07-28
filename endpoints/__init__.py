@@ -385,7 +385,7 @@ def userQuery(domainID=None):
         expr = request.args["match"]
         fields = set(request.args["matchFields"].split(",")) if "matchFields" in request.args else None
         isUnicode = any(ord(c) > 127 for c in expr)
-        matchexpr = tuple("%"+substr.replace("_", r'\_')+"%" for substr in expr.split())
+        matchexpr = ("%"+expr.replace("_", r'\_')+"%",)
         matchables = Users._meta.matchables if fields is None else (m for m in Users._meta.matchables if m.alias in fields)
         targets = []
         for prop in matchables:
@@ -401,6 +401,7 @@ def userQuery(domainID=None):
                     targets.append((metaProp, up._propvalstr))
         filters = [column.ilike(match) for match in matchexpr for prop, column in targets if prop.match == "default"] +\
                   [column == prop.tf(expr) for prop, column in targets if prop.match == "exact" and prop.tf(expr) is not None]
+
         query = query.filter(or_(filter for filter in filters) if filters else False).reset_joinpoint()
 
     if "filterProp" in request.args:
