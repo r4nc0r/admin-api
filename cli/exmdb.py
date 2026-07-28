@@ -155,7 +155,14 @@ def cliExmdbFolderPermissionsModify(args):
         if ret:
             return ret
         fids = (fid,)
-        folders = [exmdb.Folder(client.getFolderProperties(0, fid))]
+        rootFolder = exmdb.Folder(client.getFolderProperties(0, fid))
+        
+        # Prevent free-busy permissions on non-calendar folders
+        if(rootFolder.container != "IPF.Appointment" and (perms & _perms["freebusysimple"] or perms & _perms["freebusydetailed"])):
+            cli.print(cli.col("Can't set free-busy permissions: '{}' isn't a calendar folder".format(rootFolder.displayName), "red"))
+            return
+
+        folders = [rootFolder]
         if args.recursive:
             folders += exmdb.FolderList(client.listFolders(fid, True)).folders
             fids += tuple(folder.folderId for folder in folders)

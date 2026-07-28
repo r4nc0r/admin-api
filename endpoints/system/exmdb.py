@@ -8,7 +8,7 @@ import api
 from api.core import API, secure
 
 from services import Service, ServiceUnavailableError
-from tools.constants import PrivateFIDs, _permsAll
+from tools.constants import PrivateFIDs, _permsAll, _perms
 from tools.rop import makeEidEx
 from tools.exmdb import getClient, _FolderNode, exmdbFolderPermissionString
 
@@ -65,7 +65,13 @@ def userFolderPermissionsGrant(username, fid):
         if ret:
             return jsonify(message="Error getting client data"), 500
         fids = (fid,)
-        folders = [exmdb.Folder(client.getFolderProperties(0, fid))]
+        rootFolder = exmdb.Folder(client.getFolderProperties(0, fid))
+
+        # Prevent free-busy permissions on non-calendar folders
+        if(rootFolder.container != "IPF.Appointment" and (perms & _perms["freebusysimple"] or perms & _perms["freebusydetailed"])):
+            return jsonify(message="Can't set free-busy permissions: '{}' isn't a calendar folder".format(rootFolder.displayName)), 400
+
+        folders = [rootFolder]
         if recursive:
             folders += exmdb.FolderList(client.listFolders(fid, True)).folders
             fids += tuple(folder.folderId for folder in folders)
