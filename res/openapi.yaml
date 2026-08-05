@@ -2212,8 +2212,6 @@ paths:
       operationId: disabledPluginsOfUser
       tags:
         - Misc
-      security:
-        - JWTCookie: []
       parameters:
         - name: username
           in: query
