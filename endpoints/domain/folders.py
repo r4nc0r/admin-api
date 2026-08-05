@@ -208,7 +208,7 @@ def addPublicFolderOwner(domainID, folderID):
     if domain is None:
         return jsonify(message="Domain not found"), 404
     with Service("exmdb") as exmdb:
-        client = client = exmdb.domain(domain)
+        client = exmdb.domain(domain)
         client.setFolderMember(folderID, data["username"], data.get("permissions", client.ownerRights))
     with Service("redis") as redis:
         redis.delete("grommunio-sync:sharedfolders-"+domain.domainname)

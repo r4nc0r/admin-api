@@ -173,6 +173,11 @@ def _usernamesFromFile(args):
             content = client.getDelegates()
         elif args.type == "sendas":
             content = client.getSendAs()
+        elif args.type == "storeowner":
+            from tools.rop import makeEidEx
+            from tools.constants import PrivateFIDs, Permissions
+            content = exmdb.FolderMemberList(client.getFolderMemberList(makeEidEx(0, PrivateFIDs.IPMSUBTREE)))
+            content = [member.mail for member in content.members if member.rights & Permissions.STOREOWNER]
     return 0, content
 
 
@@ -203,6 +208,20 @@ def _usernamesToFile(usernames, args):
             client.setDelegates(usernames)
         elif args.type == "sendas":
             client.setSendAs(usernames)
+        elif args.type == "storeowner":
+            from tools.rop import makeEidEx
+            from tools.constants import PrivateFIDs, Permissions
+            from orm.users import Users, DB, UserSecondaryStores
+            from sqlalchemy import insert
+            eid = makeEidEx(0, PrivateFIDs.IPMSUBTREE)
+            res = client.setFolderMembers(eid, usernames, Permissions.STOREOWNER)
+            if DB.minVersion(91):
+                UserSecondaryStores.query.filter(UserSecondaryStores.secondaryID == user.ID).delete(synchronize_session=False)
+                if len(usernames):
+                    storeownerUserObjects = Users.query.filter(Users.username.in_(usernames)).all()
+                    DB.session.execute(insert(UserSecondaryStores).values([{"primary": owner.ID, "secondary": user.ID}
+                                                                            for owner in storeownerUserObjects]))
+                DB.session.commit()
     return None
 
 
@@ -783,6 +802,7 @@ def _setupCliUser(subp: ArgumentParser):
     query.add_argument("-s", "--sort", action="append", help="Sort by attribute, e.g. -s username,desc")
     query.add_argument("attributes", nargs="*", choices=AttrChoice(), help="Attributes to query", metavar="ATTRIBUTE")
     userListFileParser(sub, "sendas", "send-as", cliUserManageFileList)
+    userListFileParser(sub, "storeowner", "store owner", cliUserManageFileList)
     show = sub.add_parser("show", help="Show detailed information about user")
     show.set_defaults(_handle=cliUserShow)
     show.add_argument("userspec", help="User ID or name").completer = _cliUserspecCompleter
