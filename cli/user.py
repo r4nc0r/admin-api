@@ -8,6 +8,8 @@ from .common import proptagCompleter, Table
 from argparse import ArgumentParser
 from tools.deviceutils import retrieve_lastconnecttime
 
+from services import Service
+
 _statusMap = {0: "active", 1: "suspended", 3: "deleted", 4: "shared", 5: "contact"}
 _statusColor = {0: "green", 1: "yellow", 3: "red", 4: "cyan", 5: "blue"}
 _userAttributes = ("ID", "aliases", "changePassword", "chat", "chatAdmin", "domainID", "forward", "homeserverID", "lang",
@@ -155,32 +157,28 @@ def _splitData(args):
     return data
 
 
-def _usernamesFromFile(filename, args):
-    import os
+def _usernamesFromFile(args):
     cli = args._cli
     ret, user = _getUser(args)
     if ret:
-        return ret, None, None
+        return ret, None
     if not user.maildir:
         cli.print(cli.col("User has no mailbox", color="yellow"))
-        return 10, None, user
+        return 10, None
 
-    try:
-        with open(os.path.join(user.maildir, "config", filename), encoding="utf-8") as file:
-            return 0, [line.strip() for line in file if line.strip() != ""], user
-    except FileNotFoundError:
-        return 0, [], user
-    except (PermissionError, TypeError) as err:
-        cli.print(cli.col(str(err), "red"))
-        return 11, None, user
+    content = []
+    with Service("exmdb") as exmdb:
+        client = exmdb.user(user)
+        if args.type == "delegates":
+            content = client.getDelegates()
+        elif args.type == "sendas":
+            content = client.getSendAs()
+    return 0, content
 
 
-def _usernamesToFile(filename, usernames, args):
-    import os
+def _usernamesToFile(usernames, args):
     from orm.users import Users
     from tools import formats
-    from tools.config import Config
-    from tools.misc import setDirectoryOwner, setDirectoryPermission
 
     cli = args._cli
     ret, user = _getUser(args)
@@ -199,18 +197,13 @@ def _usernamesToFile(filename, usernames, args):
                 cli.print(cli.col(f"'{entry}' is not a known user", color="red"))
                 return 12
 
-    filepath = os.path.join(user.maildir, "config", filename)
-    try:
-        with open(filepath, "w", encoding="utf-8") as file:
-            file.write("\n".join(usernames)+"\n")
-    except (FileNotFoundError, PermissionError) as err:
-        cli.print(cli.col(str(err), "red"))
-        return 13
-    try:
-        setDirectoryOwner(filepath, Config["options"].get("fileUid"), Config["options"].get("fileGid"))
-        setDirectoryPermission(filepath, Config["options"].get("filePermissions"))
-    except Exception as err:
-        cli.print(cli.col(f"Failed to set file permissions: {err}"))
+    with Service("exmdb") as exmdb:
+        client = exmdb.user(user)
+        if args.type == "delegates":
+            client.setDelegates(usernames)
+        elif args.type == "sendas":
+            client.setSendAs(usernames)
+    return None
 
 
 def cliUserShow(args):
@@ -594,10 +587,7 @@ def cliUserManageFileList(args):
     if "action" not in args:
         args.action = "list"
 
-    filename = args.filename+".txt"
-    ret, usernames, user = _usernamesFromFile(filename, args)
-    if ret:
-        return ret
+    ret, usernames = _usernamesFromFile(args)
 
     if args.action == "add":
         for username in args.username:
@@ -605,10 +595,10 @@ def cliUserManageFileList(args):
                 cli.print(cli.col(f"'{username}' already has {args.dispname} permission", "yellow"))
             else:
                 usernames.append(username)
-        ret = _usernamesToFile(filename, usernames, args)
+        ret = _usernamesToFile(usernames, args)
     elif args.action == "clear":
         usernames = ()
-        ret = _usernamesToFile(filename, usernames, args)
+        ret = _usernamesToFile(usernames, args)
     elif args.action == "remove":
         args.force = True
         for username in args.username:
@@ -616,15 +606,15 @@ def cliUserManageFileList(args):
                 cli.print(cli.col(f"'{username}' does not have {args.dispname} permission", "yellow"))
             else:
                 usernames.remove(username)
-        ret = _usernamesToFile(filename, usernames, args)
+        ret = _usernamesToFile(usernames, args)
 
     if ret:
         return ret
     if not usernames:
-        cli.print(cli.col(f"No users have {args.dispname} permission for '{user.username}'", attrs=["dark"]))
+        cli.print(cli.col(f"No users have {args.dispname} permissions for '{args.userspec}'", attrs=["dark"]))
     else:
         cli.print("User{} with {} permission for '{}':".format("" if len(usernames) == 1 else "s", args.dispname,
-                                                               cli.col(user.username, attrs=["bold"])))
+                                                                cli.col(args.userspec, attrs=["bold"])))
         for username in usernames:
             cli.print("  "+username)
 
@@ -720,8 +710,8 @@ def _setupCliUser(subp: ArgumentParser):
         return sub
 
     def userListFileParser(parent, name, dispname, handler):
-        ulf = sub.add_parser(name, help=f"Manage {dispname} permission")
-        ulf.set_defaults(_handle=handler, filename=name, dispname=dispname)
+        ulf = parent.add_parser(name, help=f"Manage {dispname} permission")
+        ulf.set_defaults(_handle=handler, type=name, dispname=dispname)
         ulf.add_argument("userspec", help="User ID or name prefix").completer = _cliUserspecCompleter
         ulfActions = ulf.add_subparsers()
         ulfAdd = ulfActions.add_parser("add", help=f"Grant {dispname} permissions to user")
