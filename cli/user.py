@@ -85,7 +85,7 @@ def _dumpUser(cli, user, indent=0):
 
     from ldap3.utils.conv import escape_filter_chars
     user.embedStoreProperties()
-    print(user.properties)
+    
     #return
     homeserver = cli.col("(local)", attrs=["dark"]) if user.homeserver is None else \
         "{} ({})".format(user.homeserver.ID, user.homeserver.hostname)
