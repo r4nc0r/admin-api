@@ -69,7 +69,7 @@ def getDashboardServices():
     if len(known) == 0:
         return jsonify(services=[])
     with Service("systemd") as sysd:
-        units = [{"name": known.get("unit", {}).get("name") or unit["unit"].replace(".service", ""), **unit}
+        units = [{"name": known.get(unit["unit"], {}).get("name") or unit["unit"].replace(".service", ""), **unit}
                  for unit in sysd.getServices(*known).values()]
         return jsonify(services=units)
 
