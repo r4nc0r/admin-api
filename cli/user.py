@@ -85,6 +85,8 @@ def _dumpUser(cli, user, indent=0):
 
     from ldap3.utils.conv import escape_filter_chars
     user.embedStoreProperties()
+    print(user.properties)
+    #return
     homeserver = cli.col("(local)", attrs=["dark"]) if user.homeserver is None else \
         "{} ({})".format(user.homeserver.ID, user.homeserver.hostname)
     cli.print("{}ID: {}".format(" "*indent, user.ID))
@@ -108,6 +110,30 @@ def _dumpUser(cli, user, indent=0):
     cli.print(" "*indent+"altnames:"+(cli.col(" (none)", attrs=["dark"]) if len(user.altnames) == 0 else ""))
     for altname in user.altnames:
         cli.print(" "*indent+"  "+altname.altname)
+    
+    # Exmdb call to get sendas, delegates and storeowner
+    with Service("exmdb") as exmdb:
+        client = exmdb.user(user)
+
+        cli.print(" "*indent+"sendas:"+(cli.col(" (none)", attrs=["dark"]) if len(user.aliases) == 0 else ""))
+        content = client.getSendAs()
+        for mail in content:
+            cli.print(" "*indent+"  "+mail)
+
+        cli.print(" "*indent+"delegates:"+(cli.col(" (none)", attrs=["dark"]) if len(user.aliases) == 0 else ""))
+        content = client.getDelegates()
+        for mail in content:
+            cli.print(" "*indent+"  "+mail)
+
+        from tools.rop import makeEidEx
+        from tools.constants import PrivateFIDs, Permissions
+        cli.print(" "*indent+"storeowner:"+(cli.col(" (none)", attrs=["dark"]) if len(user.aliases) == 0 else ""))
+        memberList = exmdb.FolderMemberList(client.getFolderMemberList(makeEidEx(0, PrivateFIDs.IPMSUBTREE)))
+        content = [member.mail for member in memberList.members
+                    if member.rights & Permissions.STOREOWNER]
+        for mail in content:
+            cli.print(" "*indent+"  "+mail)
+
     cli.print(" "*indent+"roles:"+(cli.col(" (none)", attrs=["dark"]) if len(user.roles) == 0 else ""))
     for role in user.roles:
         cli.print(" "*indent+"  "+role.name)
