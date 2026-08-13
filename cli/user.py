@@ -85,7 +85,7 @@ def _dumpUser(cli, user, indent=0):
 
     from ldap3.utils.conv import escape_filter_chars
     user.embedStoreProperties()
-    
+
     #return
     homeserver = cli.col("(local)", attrs=["dark"]) if user.homeserver is None else \
         "{} ({})".format(user.homeserver.ID, user.homeserver.hostname)
@@ -398,7 +398,9 @@ def cliUserLogin(args):
     else:
         token = mkJWT({"usr": user.username})
         csrf = mkCSRF(token)
-        cli.print(cli.col("Token: ", attrs=["bold"])+token+"\n"+cli.col("CSRF: ", attrs=["bold"])+csrf)
+        import json
+        cookie = f'grommunioAuthJwt={token}'
+        print(json.dumps({'Cookie': cookie, 'X-CSRF-TOKEN': csrf}))
 
 
 def _cliUserDevicesDecodeSyncState(args, data, username):
