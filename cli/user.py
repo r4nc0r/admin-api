@@ -587,12 +587,12 @@ def cliUserQuery(args):
         if args.format == "pretty" else {}
 
     from orm.users import Users
-    args.attributes = args.attributes or ("ID", "username", "status")
+    attributes = _userAttributes if args.all else args.attributes or ("ID", "username", "status")
     query = _mkUserQuery(args)
-    query = Users.optimize_query(query, args.attributes)
-    users = [user.todict(args.attributes) for user in query]
-    data = [[attrTf.get(attr, lambda x: x)(user.get(attr)) for attr in args.attributes] for user in users]
-    header = None if len(args.attributes) <= 1 and args.format == "pretty" else args.attributes
+    query = Users.optimize_query(query, attributes)
+    users = [user.todict(attributes) for user in query]
+    data = [[attrTf.get(attr, lambda x: x)(user.get(attr)) for attr in attributes] for user in users]
+    header = None if len(attributes) <= 1 and args.format == "pretty" else attributes
     table = Table(data, header, args.separator, cli.col("(no results)", attrs=["dark"]))
     table.dump(cli, args.format)
 
@@ -800,6 +800,7 @@ def _setupCliUser(subp: ArgumentParser):
                        metavar="FORMAT", default="pretty")
     query.add_argument("--separator", help="Set column separator")
     query.add_argument("-s", "--sort", action="append", help="Sort by attribute, e.g. -s username,desc")
+    query.add_argument("--all", action="store_true", help="Print all user attributes")
     query.add_argument("attributes", nargs="*", choices=AttrChoice(), help="Attributes to query", metavar="ATTRIBUTE")
     userListFileParser(sub, "sendas", "send-as", cliUserManageFileList)
     userListFileParser(sub, "storeowner", "store owner", cliUserManageFileList)
