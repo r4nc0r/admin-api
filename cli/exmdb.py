@@ -316,12 +316,12 @@ def _setupCliExmdb(subp: ArgumentParser):
     list.add_argument("--format", nargs="?", default="pretty", help="Output format", metavar="FORMAT",
                       choices=("csv", "json-flat", "json-tree", "pretty", "table"))
     list.add_argument("-r", "--recursive", action="store_true", help="Recursively list subfolders")
-    permissions = foldersub.add_parser("permissions")
+    permissions = foldersub.add_parser("permissions", help="Show folder permissions")
     permissions.set_defaults(_handle=cliExmdbFolderPermissionsShow)
     permissions.add_argument("ID", type=xint, help="Folder ID")
     permissions.add_argument("username", nargs="*", help="E-Mail address of the user to show permissions of")\
                .completer = _cliTargetCompleter
-    revoke = foldersub.add_parser("revoke", help="Grant permissions to user")
+    revoke = foldersub.add_parser("revoke", help="Revoke permissions from user")
     revoke.set_defaults(_handle=cliExmdbFolderPermissionsModify, revoke=True)
     revoke.add_argument("ID", type=xint, help="Folder ID")
     revoke.add_argument("username", help="E-Mail address of the user to revoke permissions from")\
@@ -329,7 +329,7 @@ def _setupCliExmdb(subp: ArgumentParser):
     revoke.add_argument("permission", nargs="*", type=perm, choices=PermChoices(), help="Permission name or value",
                         metavar="permission")
     revoke.add_argument("-r", "--recursive", action="store_true", help="Apply to subfolders recursively")
-    properties = foldersub.add_parser("properties")
+    properties = foldersub.add_parser("properties", help="Manage folder properties")
     Cli.parser_stub(properties)
     propertiesSub = properties.add_subparsers()
     propertiesGet = propertiesSub.add_parser("get", help="Get properties")
