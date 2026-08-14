@@ -135,7 +135,7 @@ class SearchResult:
                 from tools import formats
                 aliases = ldapuser[aliasattr]
                 aliases = aliases if isinstance(aliases, list) else [aliases]
-                aliases = [alias[5:] if alias.lower().startswith("smtp:") else alias for alias in aliases]
+                aliases = [alias[5:].lower() if alias.startswith("smtp:") else alias for alias in aliases]
                 userdata["aliases"] += [alias for alias in aliases
                                         if formats.email.match(alias) and alias.lower() != userdata["username"]]
         altnameattr = ldap._config["users"].get("altname")
