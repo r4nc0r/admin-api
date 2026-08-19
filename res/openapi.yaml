@@ -1880,6 +1880,63 @@ paths:
           $ref: '#/components/responses/ServerError'
         '503':
           $ref: '#/components/responses/DatabaseError'
+    
+  /system/exmdb/{username}/folders/{fid}/permissions/{permittedUser}:
+    patch:
+      summary: Add new member
+      operationId: postUserFolderPermissionsGrant
+      tags:
+        - exmdb
+      security:
+        - JWTCookie: []
+      parameters:
+        - $ref: '#/components/parameters/CSRFToken'
+        - name: username
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+        - name: fid
+          in: path
+          description: Folder ID
+          required: true
+          schema:
+            type: integer
+        - name: permittedUser
+          in: path
+          description: Permitted user email
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: number
+                recursive:
+                  type: boolean
+      responses:
+        '200':
+          description: Permission granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/DatabaseError'
 
   /system/cli:
     post:

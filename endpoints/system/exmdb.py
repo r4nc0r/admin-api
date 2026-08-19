@@ -83,4 +83,38 @@ def userFolderPermissionsGrant(username, fid):
                                         )
                     for fid in fids]
         return jsonify(message="Success"), 201 if request.method == "POST" else 200
+
+
+@API.route(api.BaseRoute+"/system/exmdb/<string:username>/folders/<int:fid>/permissions/<string:permittedUser>", methods=["PATCH"])
+@secure(requireDB=True)
+def userFolderPermissionsUpdate(username, fid, permittedUser):
+    from functools import reduce
+    args = request.get_json(silent=True) or {}
+    recursive = args["recursive"] if "recursive" in args else False
+    permissions = args["permissions"] if "permissions" in args else []
+
+    fid = makeEidEx(1, fid)
+    perms = reduce(lambda x, y: x | y, permissions, 0) if permissions else 0
+    with Service("exmdb") as exmdb:
+        ret, client = getClient(username, exmdb)
+        if ret:
+            return jsonify(message="Error getting client data"), 500
+        fids = (fid,)
+        rootFolder = exmdb.Folder(client.getFolderProperties(0, fid))
+
+        # Prevent free-busy permissions on non-calendar folders
+        if(rootFolder.container != "IPF.Appointment" and (perms & _perms["freebusysimple"] or perms & _perms["freebusydetailed"])):
+            return jsonify(message="Can't set free-busy permissions: '{}' isn't a calendar folder".format(rootFolder.displayName)), 400
+
+        folders = [rootFolder]
+        if recursive:
+            folders += exmdb.FolderList(client.listFolders(fid, True)).folders
+            fids += tuple(folder.folderId for folder in folders)
+
+        for fid in fids:
+            client.setFolderMember(fid, permittedUser, _permsAll, client.REMOVE)
+
+        perms = [client.setFolderMember(fid, permittedUser, perms,client.ADD)
+                    for fid in fids]
+        return jsonify(message="Success"), 201 if request.method == "POST" else 200
     
