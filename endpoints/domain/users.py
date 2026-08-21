@@ -510,7 +510,7 @@ def setUserStoreAccess(domainID, userID):
     eid = makeEidEx(0, PrivateFIDs.IPMSUBTREE)
     with Service("exmdb") as exmdb:
         client = exmdb.user(user)
-        client.setFolderMember(eid, data["username"], Permissions.STOREOWNER)
+        client.setFolderMember(eid, data["username"], Permissions.FOLDEROWNER)
     if DB.minVersion(91):
         DB.session.execute(insert(UserSecondaryStores).values(primary=primary, secondary=user.ID).prefix_with("IGNORE"))
         DB.session.commit()
@@ -536,7 +536,7 @@ def setUserStoreAccessMulti(domainID, userID):
     eid = makeEidEx(0, PrivateFIDs.IPMSUBTREE)
     with Service("exmdb") as exmdb:
         client = exmdb.user(user)
-        res = client.setFolderMembers(eid, [user.username for user in primary], Permissions.STOREOWNER)
+        res = client.setFolderMembers(eid, [user.username for user in primary], Permissions.FOLDEROWNER)
     if DB.minVersion(91):
         UserSecondaryStores.query.filter(UserSecondaryStores.secondaryID == user.ID).delete(synchronize_session=False)
         if len(primary):
@@ -560,7 +560,7 @@ def getUserStoreAccess(domainID, userID):
         client = exmdb.user(user)
         memberList = exmdb.FolderMemberList(client.getFolderMemberList(makeEidEx(0, PrivateFIDs.IPMSUBTREE)))
         members = [{"ID": member.id, "displayName": member.name, "username": member.mail} for member in memberList.members
-                   if member.rights & Permissions.STOREOWNER]
+                   if member.rights & Permissions.FOLDEROWNER]
     return jsonify(data=members)
 
 
@@ -576,7 +576,7 @@ def deleteUserStoreAccess(domainID, userID, username):
         return jsonify(message="User has no store"), 400
     with Service("exmdb") as exmdb:
         client = exmdb.user(user)
-        client.setFolderMember(makeEidEx(0, PrivateFIDs.IPMSUBTREE), username, Permissions.STOREOWNER, client.REMOVE)
+        client.setFolderMember(makeEidEx(0, PrivateFIDs.IPMSUBTREE), username, Permissions.FOLDEROWNER, client.REMOVE)
     if DB.minVersion(91):
         primary = Users.query.with_entities(Users.ID).filter(Users.username == username).first()
         if primary is not None:
