@@ -1817,9 +1817,7 @@ paths:
               type: object
               properties:
                 permissions:
-                  type: array
-                  items:
-                    type: number
+                  type: number
                 recursive:
                   type: boolean
                 username:
@@ -1916,9 +1914,7 @@ paths:
               type: object
               properties:
                 permissions:
-                  type: array
-                  items:
-                    type: number
+                  type: number
                 recursive:
                   type: boolean
       responses:
