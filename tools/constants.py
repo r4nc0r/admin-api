@@ -1226,7 +1226,11 @@ class Permissions:
     FOLDERVISIBLE = 0x00000400
     FREEBUSYSIMPLE = 0x00000800
     FREEBUSYDETAILED = 0x00001000
-    STOREOWNER = 0x00002000
+    GROMOXSTOREOWNER = 0x00002000
+    # gromox treats FOLDEROWNER on IPM_SUBTREE as store owner. GROMOXSTOREOWNER
+    # is an internal permission that shouldn't be used by external APIs.
+    STOREACCESS = FOLDEROWNER | FOLDERCONTACT | FOLDERVISIBLE
+
 
     @classmethod
     def domainDefault(cls):
